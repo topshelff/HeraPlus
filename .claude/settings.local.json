@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:elevenlabs.io)"
+      "WebFetch(domain:elevenlabs.io)",
+      "WebSearch",
+      "WebFetch(domain:docs.physiology.presagetech.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }

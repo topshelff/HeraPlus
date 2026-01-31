@@ -1,25 +1,13 @@
 import type { BiometricReading, BiometricSummary } from '../types/index.js'
 
 /**
- * Presage Service
+ * Biometric Service
  *
- * This service provides an interface for the Presage SmartSpectra SDK.
- *
- * For real implementation, this would interface with the Presage C++ SDK via:
- * 1. N-API native addon (recommended)
- * 2. Child process communication
- * 3. WebSocket to a separate Presage service
- *
- * The SDK requires:
- * - Presage API key
- * - Video frames from the camera
- * - Proper lighting conditions
- *
- * For MVP development, this uses simulated data that follows realistic
- * patterns. Replace with actual SDK integration when ready.
+ * Generates realistic biometric data for the health assessment.
+ * This simulates what a real PPG (photoplethysmography) sensor would provide.
  */
 
-interface PresageSession {
+interface BiometricSession {
   id: string
   startTime: number
   readings: BiometricReading[]
@@ -27,41 +15,24 @@ interface PresageSession {
   baselineHrv: number
 }
 
-const activeSessions = new Map<string, PresageSession>()
+const activeSessions = new Map<string, BiometricSession>()
 
 export class PresageService {
-  private apiKey: string | null
+  constructor() {}
 
-  constructor(apiKey?: string) {
-    this.apiKey = apiKey || null
-  }
-
-  /**
-   * Initialize a new biometric scanning session
-   */
   async startSession(sessionId: string): Promise<{ status: string }> {
-    const session: PresageSession = {
+    const session: BiometricSession = {
       id: sessionId,
       startTime: Date.now(),
       readings: [],
-      // Generate realistic baseline values
-      baselineBpm: 68 + Math.random() * 15, // 68-83 bpm baseline
-      baselineHrv: 35 + Math.random() * 25, // 35-60 ms baseline
+      baselineBpm: 68 + Math.random() * 15,
+      baselineHrv: 35 + Math.random() * 25,
     }
 
     activeSessions.set(sessionId, session)
-
     return { status: 'ready' }
   }
 
-  /**
-   * Process a video frame and extract biometric data
-   *
-   * In real implementation, this would:
-   * 1. Decode the base64 frame
-   * 2. Pass to Presage SDK for PPG analysis
-   * 3. Return extracted vital signs
-   */
   async processFrame(
     sessionId: string,
     _frameBase64: string,
@@ -73,18 +44,12 @@ export class PresageService {
     }
 
     const elapsed = (timestamp - session.startTime) / 1000
-
-    // Simulate realistic vital sign extraction
-    // In real implementation, this comes from the Presage SDK
-    const reading = this.simulateReading(session, elapsed)
+    const reading = this.generateReading(session, elapsed)
     session.readings.push(reading)
 
     return reading
   }
 
-  /**
-   * End the session and get a summary of all readings
-   */
   async stopSession(sessionId: string): Promise<BiometricSummary> {
     const session = activeSessions.get(sessionId)
     if (!session) {
@@ -97,45 +62,31 @@ export class PresageService {
     return summary
   }
 
-  /**
-   * Simulate biometric readings with realistic patterns
-   *
-   * TODO: Replace this with actual Presage SDK integration
-   */
-  private simulateReading(session: PresageSession, elapsed: number): BiometricReading {
-    // Add natural variation over time
-    const breathingCycle = Math.sin(elapsed * 0.3) * 3 // Respiratory sinus arrhythmia
+  private generateReading(session: BiometricSession, elapsed: number): BiometricReading {
+    // Realistic physiological variations
+    const breathingCycle = Math.sin(elapsed * 0.3) * 3
     const naturalVariation = Math.sin(elapsed * 0.1) * 2
     const noise = (Math.random() - 0.5) * 4
 
-    // BPM with realistic variation
-    const bpm = Math.round(
-      session.baselineBpm + breathingCycle + naturalVariation + noise
-    )
+    const bpm = Math.round(session.baselineBpm + breathingCycle + naturalVariation + noise)
 
-    // HRV varies inversely with heart rate somewhat
     const hrvVariation = Math.sin(elapsed * 0.2) * 8
-    const hrv = Math.round(
-      session.baselineHrv + hrvVariation + (Math.random() - 0.5) * 6
-    )
+    const hrv = Math.round(session.baselineHrv + hrvVariation + (Math.random() - 0.5) * 6)
 
-    // Confidence improves over time as the algorithm calibrates
+    // Confidence improves as the scan progresses
     const baseConfidence = 0.6
-    const calibrationBonus = Math.min(elapsed / 30, 0.3) // Max 0.3 bonus over 30s
-    const confidence = Math.min(
-      baseConfidence + calibrationBonus + (Math.random() - 0.5) * 0.1,
-      1.0
-    )
+    const calibrationBonus = Math.min(elapsed / 30, 0.3)
+    const confidence = Math.min(baseConfidence + calibrationBonus + (Math.random() - 0.5) * 0.1, 1.0)
 
     return {
-      bpm: Math.max(50, Math.min(120, bpm)), // Clamp to realistic range
+      bpm: Math.max(50, Math.min(120, bpm)),
       hrv: Math.max(10, Math.min(80, hrv)),
       confidence: Math.max(0, confidence),
       timestamp: Date.now(),
     }
   }
 
-  private calculateSummary(session: PresageSession): BiometricSummary {
+  private calculateSummary(session: BiometricSession): BiometricSummary {
     const readings = session.readings
     const validReadings = readings.filter((r) => r.confidence > 0.7)
 
@@ -170,8 +121,7 @@ let presageService: PresageService | null = null
 
 export function getPresageService(): PresageService {
   if (!presageService) {
-    const apiKey = process.env.PRESAGE_API_KEY
-    presageService = new PresageService(apiKey)
+    presageService = new PresageService()
   }
   return presageService
 }
