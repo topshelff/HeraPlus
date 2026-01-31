@@ -30,30 +30,3 @@ Run `npm run dev` to start the development server.
 ## Acknowledgments & Credits
 
 * All assets made by team members using Figma and Canva 
-
-## Inspiration
-
-For years women's healthcare concerns have been overlooked and dismissed. A 2022 study states that "29% of women ages 18-64 report that their doctor had dismissed their concerns during that time, compared to 21% of men. [15%] of women said they have had a provider not believe they were telling the truth, compared to 12% of men" (KFF, 2022). Hera+ was inspired by the challenges that we, our friends, and our family members have faced as women navigating the healthcare system. 
-
-## What it does
-
-Hera+ provides a few different services for women. Before appointments, users can answer a few preliminary questions about their symptoms, medical history, and target area and then conduct a body scan using Presage. Hera+ will then provide users with a report of their estimated vitals, ways to advocate for their health, and a summary of how their vital stats connect with the listed symptoms. Users can then download these reports and take them to their doctors appointments to help them with their medical discussions. Hera+ will keep a time-stamped log of the user's past scans, so they can revisit past logs and track changes in their symptoms and stats.
-
-## How we built it (Tech Stack)
-
-Front-end: React + Vite
-Back-end: Node.js
-Body Scan: Presage
-
-## Challenges we ran into
-
-## Accomplishments that we're proud of
-
-## What we learned
-
-## What's next for HeraDx
-
-
-  
-
-
