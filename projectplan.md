@@ -116,7 +116,7 @@ This starts:
 
 ```
 # Server
-GEMINI_API_KEY=AIzaSyASblGWug29YmwapfSVHzVKAxV7HlxCrHQ
+GEMINI_API_KEY=AIzaSyDf6ca8ohYWpw1b8VVELtg_KwmKrkTCAGk
 ELEVENLABS_API_KEY=sk_bb694e0a45159511a58bcfda67dd75818ba690f188ca25d7
 PRESAGE_API_KEY=soccnkJ9DJ71jJa3OMME10jUQLn7FOr71cb8QsUd
 
@@ -125,3 +125,46 @@ VITE_API_BASE_URL=http://localhost:3001
 ```
 
 **Note**: OpenStreetMap/Leaflet.js require NO API keys - completely free to use.
+
+---
+
+## Supabase Authentication & Database
+
+### Overview
+Users can sign up, log in, save diagnostic sessions, and view historical data with graphs to share with their doctor.
+
+### Database Schema
+
+**Tables:**
+- `profiles` - User profiles (linked to Supabase auth.users)
+- `sessions` - Diagnostic sessions with intake data
+- `symptoms` - Symptoms per session
+- `biometric_summaries` - BPM/HRV summary per session
+- `diagnosis_results` - AI triage results per session
+
+### New Routes
+```
+/auth     - Login/Signup page (public)
+/         - IntakePage (protected)
+/diagnostic - DiagnosticSessionPage (protected)
+/report   - ValidationReportPage (protected)
+/history  - HistoryPage with charts (protected)
+```
+
+### Key Files Added
+- `client/src/lib/supabase.ts` - Supabase client
+- `client/src/context/AuthContext.tsx` - Auth state management
+- `client/src/components/common/ProtectedRoute.tsx` - Route guard
+- `client/src/pages/AuthPage.tsx` - Login/signup UI
+- `client/src/pages/HistoryPage.tsx` - View past sessions with charts
+- `client/src/services/supabaseApi.ts` - Database CRUD operations
+- `client/src/components/history/BiometricTrendChart.tsx` - Recharts line chart
+
+### Environment Variables (Client)
+```
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### SQL Schema (Run in Supabase SQL Editor)
+See `.claude/plans/resilient-juggling-graham.md` for full SQL schema with RLS policies.

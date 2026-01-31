@@ -63,8 +63,8 @@ export default function BodyMap() {
              M135,135 L105,140 L75,155 L70,250 L100,280 L105,280 L105,140 L135,135
              M165,135 L195,140 L225,155 L230,250 L200,280 L195,280 L195,140 L165,135
              M105,140 L195,140 L200,280 L185,320 L180,420 L160,420 L155,320 L145,320 L140,420 L120,420 L115,320 L100,280 L105,140"
-          fill="#f0f9ff"
-          stroke="#bae6fd"
+          fill="#f0fdf4"
+          stroke="#bbf7d0"
           strokeWidth="2"
         />
 
@@ -75,12 +75,12 @@ export default function BodyMap() {
             <g key={region.id}>
               <path
                 d={region.path}
-                fill={isSelected ? '#0ea5e9' : 'transparent'}
+                fill={isSelected ? '#22c55e' : 'transparent'}
                 fillOpacity={isSelected ? 0.4 : 0}
-                stroke={isSelected ? '#0284c7' : '#94a3b8'}
+                stroke={isSelected ? '#15803d' : '#94a3b8'}
                 strokeWidth={isSelected ? 2 : 1}
                 strokeDasharray={isSelected ? 'none' : '4,2'}
-                className="cursor-pointer transition-all duration-200 hover:fill-clinical-200 hover:fill-opacity-50"
+                className="cursor-pointer transition-all duration-200 hover:fill-healing-200 hover:fill-opacity-50"
                 onClick={() => toggleBodyPart(region.id)}
                 role="button"
                 aria-label={`Select ${region.label}`}
@@ -102,8 +102,8 @@ export default function BodyMap() {
               className={`
                 px-3 py-1 rounded-full text-xs font-medium transition-all duration-200
                 ${isSelected
-                  ? 'bg-clinical-600 text-white'
-                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                  ? 'bg-healing-700 text-white'
+                  : 'bg-neutral-100 text-neutral-600 hover:bg-healing-100'
                 }
               `}
             >

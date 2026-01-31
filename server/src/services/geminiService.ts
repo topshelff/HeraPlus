@@ -56,6 +56,7 @@ export class GeminiService {
         differentialConsiderations: parsed.differentialConsiderations || [],
         redFlags: parsed.redFlags || [],
         recommendations: parsed.recommendations || ['Consult with a healthcare provider'],
+        questionsForDoctor: parsed.questionsForDoctor || [],
         specialtyReferral: parsed.specialtyReferral,
         disclaimer: parsed.disclaimer || 'This is a preliminary triage assessment, not a medical diagnosis. Always consult with a qualified healthcare provider.',
       }

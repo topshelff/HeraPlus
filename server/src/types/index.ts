@@ -28,6 +28,7 @@ export interface IntakeData {
   lifeStage: LifeStage
   selectedBodyParts: BodyPart[]
   symptoms: Symptom[]
+  currentMedications?: string[]
   additionalNotes?: string
 }
 
@@ -58,6 +59,7 @@ export interface DiagnosisResult {
   differentialConsiderations: string[]
   redFlags: string[]
   recommendations: string[]
+  questionsForDoctor?: string[]
   specialtyReferral?: string
   disclaimer: string
 }

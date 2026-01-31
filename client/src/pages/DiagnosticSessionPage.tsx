@@ -14,7 +14,14 @@ const SCAN_DURATION_SECONDS = 30 // Shorter for demo
 
 export default function DiagnosticSessionPage() {
   const navigate = useNavigate()
-  const { lifeStage, selectedBodyParts, symptoms, setDiagnosisResult } = useApp()
+  const {
+    lifeStage,
+    selectedBodyParts,
+    symptoms,
+    setDiagnosisResult,
+    createSession,
+    saveSessionData,
+  } = useApp()
   const {
     scanPhase,
     setScanPhase,
@@ -28,6 +35,7 @@ export default function DiagnosticSessionPage() {
   const [isInitializing, setIsInitializing] = useState(true)
   const simulationIntervalRef = useRef<number | null>(null)
   const baselineRef = useRef({ bpm: 72 + Math.random() * 10, hrv: 45 + Math.random() * 15 })
+  const sessionCreatedRef = useRef(false)
 
   // Initialize camera on mount
   useEffect(() => {
@@ -104,24 +112,35 @@ export default function DiagnosticSessionPage() {
     }
   }, [isScanning, scanDuration, stopScan, setScanPhase])
 
-  const handleStartScanning = useCallback(() => {
+  const handleStartScanning = useCallback(async () => {
+    // Create session in Supabase when scan starts
+    if (!sessionCreatedRef.current) {
+      sessionCreatedRef.current = true
+      await createSession()
+    }
     startScan()
     setScanPhase('scanning')
-  }, [startScan, setScanPhase])
+  }, [startScan, setScanPhase, createSession])
 
   // Quick test bypass - skip scanning and use sample data
   const handleQuickTest = useCallback(async () => {
     setProcessingDiagnosis(true)
     setScanPhase('analyzing')
 
+    // Create session first
+    if (!sessionCreatedRef.current) {
+      sessionCreatedRef.current = true
+      await createSession()
+    }
+
     const sampleBiometrics = {
-      averageBpm: 72,
-      bpmRange: { min: 68, max: 78 },
-      averageHrv: 45,
-      hrvRange: { min: 38, max: 52 },
-      averageConfidence: 0.85,
-      readingCount: 30,
-      durationSeconds: 30,
+      avgBpm: 72,
+      avgHrv: 45,
+      minBpm: 68,
+      maxBpm: 78,
+      scanDuration: 30,
+      totalReadings: 30,
+      validReadings: 28,
     }
 
     try {
@@ -139,6 +158,8 @@ export default function DiagnosticSessionPage() {
       console.log('API result:', result)
 
       if (result && result.urgencyLevel) {
+        // Save to Supabase
+        await saveSessionData(sampleBiometrics, result)
         setDiagnosisResult(result)
         navigate('/report')
       } else {
@@ -149,7 +170,7 @@ export default function DiagnosticSessionPage() {
       alert(`Error: ${err instanceof Error ? err.message : 'Failed'}`)
       setProcessingDiagnosis(false)
     }
-  }, [lifeStage, selectedBodyParts, symptoms, setDiagnosisResult, setProcessingDiagnosis, setScanPhase, navigate])
+  }, [lifeStage, selectedBodyParts, symptoms, setDiagnosisResult, setProcessingDiagnosis, setScanPhase, navigate, createSession, saveSessionData])
 
   const handleAnalyze = useCallback(async () => {
     setProcessingDiagnosis(true)
@@ -184,6 +205,8 @@ export default function DiagnosticSessionPage() {
       // Even if status is 500, we might have a fallback result we can use
       if (result && result.urgencyLevel) {
         console.log('Using result (fallback or success)')
+        // Save to Supabase
+        await saveSessionData(biometricSummary, result)
       } else if (!response.ok) {
         throw new Error(`Failed to analyze: ${response.status}`)
       }
@@ -204,6 +227,7 @@ export default function DiagnosticSessionPage() {
     setProcessingDiagnosis,
     setScanPhase,
     navigate,
+    saveSessionData,
   ])
 
   if (isInitializing) {

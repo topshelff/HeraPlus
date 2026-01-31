@@ -7,7 +7,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles = {
-  primary: 'bg-clinical-600 hover:bg-clinical-700 text-white disabled:bg-clinical-300',
+  primary: 'bg-healing-700 hover:bg-healing-800 text-white disabled:bg-healing-300',
   secondary: 'bg-neutral-200 hover:bg-neutral-300 text-neutral-800 disabled:bg-neutral-100 disabled:text-neutral-400',
   danger: 'bg-red-600 hover:bg-red-700 text-white disabled:bg-red-300',
 }
@@ -30,7 +30,7 @@ export default function Button({
     <button
       className={`
         font-medium rounded-lg transition-colors duration-200
-        focus:outline-none focus:ring-2 focus:ring-clinical-500 focus:ring-offset-2
+        focus:outline-none focus:ring-2 focus:ring-healing-500 focus:ring-offset-2
         disabled:cursor-not-allowed
         ${variantStyles[variant]}
         ${sizeStyles[size]}

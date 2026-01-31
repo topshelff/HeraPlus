@@ -53,6 +53,7 @@ export interface DiagnosisResult {
   differentialConsiderations: string[]
   redFlags: string[]
   recommendations: string[]
+  questionsForDoctor?: string[]
   specialtyReferral?: string
   disclaimer: string
 }

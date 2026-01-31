@@ -63,6 +63,10 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
+      boxShadow: {
+        'clinical': '0 4px 20px rgba(0, 0, 0, 0.08)',
+        'clinical-lg': '0 8px 40px rgba(0, 0, 0, 0.12)',
+      },
     },
   },
   plugins: [],

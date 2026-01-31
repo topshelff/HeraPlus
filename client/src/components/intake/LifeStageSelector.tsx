@@ -46,14 +46,14 @@ export default function LifeStageSelector() {
           className={`
             p-3 rounded-lg border-2 text-left transition-all duration-200
             ${lifeStage === stage.value
-              ? 'border-clinical-500 bg-clinical-50'
-              : 'border-neutral-200 hover:border-neutral-300 bg-white'
+              ? 'border-healing-600 bg-healing-50'
+              : 'border-neutral-200 hover:border-healing-300 bg-white'
             }
           `}
         >
           <span className={`
             block font-medium text-sm
-            ${lifeStage === stage.value ? 'text-clinical-700' : 'text-neutral-800'}
+            ${lifeStage === stage.value ? 'text-healing-700' : 'text-neutral-800'}
           `}>
             {stage.label}
           </span>

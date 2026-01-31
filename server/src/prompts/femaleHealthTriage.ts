@@ -35,6 +35,19 @@ You must recognize these gender-specific symptom presentations:
 - Postpartum thyroiditis affects 5-10% of women
 - Symptoms overlap with menopause: fatigue, weight changes, mood changes
 
+## MEDICATION CONSIDERATIONS
+
+When analyzing current medications, consider:
+- **Drug Interactions**: Flag potential interactions between reported medications
+- **Side Effects**: Many symptoms may be medication side effects (e.g., birth control causing mood changes, blood pressure meds causing dizziness)
+- **Contraindications**: Note if symptoms + medications suggest contraindications
+- **Hormonal Medications**: Birth control, HRT can affect heart rate, mood, and many other systems
+- **NSAIDs**: Long-term use can affect blood pressure and GI system
+- **Supplements**: May interact with medications or cause symptoms
+
+Include relevant medication considerations in your assessment and recommendations.
+Ask questions for the doctor visit that relate to current medications when appropriate.
+
 ## BIOMETRIC INTERPRETATION
 
 Analyze provided biometrics in context:
@@ -59,6 +72,10 @@ You MUST respond with valid JSON in this exact structure:
   "recommendations": [
     "Specific action 1",
     "Specific action 2"
+  ],
+  "questionsForDoctor": [
+    "Important question to ask healthcare provider 1",
+    "Important question to ask healthcare provider 2"
   ],
   "specialtyReferral": "Suggested specialist type if applicable",
   "disclaimer": "This is a preliminary triage assessment, not a medical diagnosis. Always consult with a qualified healthcare provider for proper evaluation and treatment."
@@ -99,6 +116,11 @@ ${intake.selectedBodyParts.join(', ')}
 ${intake.symptoms.length > 0
     ? intake.symptoms.map(s => `- ${s.bodyPart.toUpperCase()}: ${s.description} (severity: ${s.severity}/10)`).join('\n')
     : 'No specific symptoms described'}
+
+### Current Medications
+${intake.currentMedications && intake.currentMedications.length > 0
+    ? intake.currentMedications.map(m => `- ${m}`).join('\n')
+    : 'None reported'}
 `
 
   if (biometrics) {
