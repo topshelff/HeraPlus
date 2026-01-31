@@ -109,6 +109,48 @@ export default function DiagnosticSessionPage() {
     setScanPhase('scanning')
   }, [startScan, setScanPhase])
 
+  // Quick test bypass - skip scanning and use sample data
+  const handleQuickTest = useCallback(async () => {
+    setProcessingDiagnosis(true)
+    setScanPhase('analyzing')
+
+    const sampleBiometrics = {
+      averageBpm: 72,
+      bpmRange: { min: 68, max: 78 },
+      averageHrv: 45,
+      hrvRange: { min: 38, max: 52 },
+      averageConfidence: 0.85,
+      readingCount: 30,
+      durationSeconds: 30,
+    }
+
+    try {
+      console.log('Quick test - sending sample data to Gemini')
+      const response = await fetch('/api/diagnosis/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          intake: { lifeStage, selectedBodyParts, symptoms },
+          biometrics: sampleBiometrics,
+        }),
+      })
+
+      const result = await response.json()
+      console.log('API result:', result)
+
+      if (result && result.urgencyLevel) {
+        setDiagnosisResult(result)
+        navigate('/report')
+      } else {
+        throw new Error('Invalid response')
+      }
+    } catch (err) {
+      console.error('Quick test error:', err)
+      alert(`Error: ${err instanceof Error ? err.message : 'Failed'}`)
+      setProcessingDiagnosis(false)
+    }
+  }, [lifeStage, selectedBodyParts, symptoms, setDiagnosisResult, setProcessingDiagnosis, setScanPhase, navigate])
+
   const handleAnalyze = useCallback(async () => {
     setProcessingDiagnosis(true)
     setScanPhase('analyzing')
@@ -216,9 +258,14 @@ export default function DiagnosticSessionPage() {
               <p className="text-white mb-4">
                 Position your face in the center of the screen and remain still
               </p>
-              <Button variant="primary" size="lg" onClick={handleStartScanning}>
-                Begin Scan
-              </Button>
+              <div className="flex gap-3 justify-center">
+                <Button variant="primary" size="lg" onClick={handleStartScanning}>
+                  Begin Scan
+                </Button>
+                <Button variant="secondary" size="lg" onClick={handleQuickTest}>
+                  Quick Test (Skip Scan)
+                </Button>
+              </div>
             </div>
           )}
 

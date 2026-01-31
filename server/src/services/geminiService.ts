@@ -4,7 +4,7 @@ import type { IntakeData, BiometricSummary, DiagnosisResult } from '../types/ind
 
 export class GeminiService {
   private client: GoogleGenerativeAI
-  private modelId = 'gemini-1.5-pro'
+  private modelId = 'gemini-2.5-flash-lite'
 
   constructor(apiKey: string) {
     this.client = new GoogleGenerativeAI(apiKey)

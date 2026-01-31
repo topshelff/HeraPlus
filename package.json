@@ -8,9 +8,9 @@
     "server"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
-    "dev:client": "npm run dev --workspace=client",
-    "dev:server": "npm run dev --workspace=server",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "client": "npm run dev --prefix client",
+    "server": "npm run dev --prefix server",
     "build": "npm run build --workspace=client && npm run build --workspace=server",
     "start": "npm run start --workspace=server"
   },
@@ -18,6 +18,7 @@
     "concurrently": "^8.2.2"
   },
   "dependencies": {
-    "@google/genai": "^1.39.0"
+    "@google/genai": "^1.39.0",
+    "latest": "^0.2.0"
   }
 }
