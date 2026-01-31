@@ -33,6 +33,11 @@ async function apiRequest<T>(endpoint: string, options: ApiOptions = {}): Promis
 
 // Biometrics API
 export const biometricsApi = {
+  getMode: () =>
+    apiRequest<{ mode: 'video_api' | 'api' | 'bridge' | 'simulation'; realPresage: boolean }>(
+      '/api/biometrics/mode'
+    ),
+
   start: (sessionId: string) =>
     apiRequest<{ status: string }>('/api/biometrics/start', {
       method: 'POST',

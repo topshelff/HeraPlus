@@ -1,7 +1,15 @@
 import { Router, Request, Response } from 'express'
-import { getPresageService } from '../services/presageService.js'
+import { getPresageService, getPresageMode, isRealPresage } from '../services/presageService.js'
 
 export const biometricsRouter = Router()
+
+// Expose Presage mode to the client (mock vs real, api vs bridge vs simulation)
+biometricsRouter.get('/mode', (_req: Request, res: Response) => {
+  res.json({
+    mode: getPresageMode(),
+    realPresage: isRealPresage(),
+  })
+})
 
 // Start a new biometric scanning session
 biometricsRouter.post('/start', async (req: Request, res: Response) => {

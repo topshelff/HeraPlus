@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "dev:presage": "docker-compose -f docker-compose.presage.yml up -d && npm run dev",
     "client": "npm run dev --prefix client",
     "server": "npm run dev --prefix server",
     "build": "npm run build --workspace=client && npm run build --workspace=server",

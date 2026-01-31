@@ -1,12 +1,26 @@
+import { useEffect, useState } from 'react'
 import { useBiometrics } from '../../context/BiometricContext'
+import { biometricsApi } from '../../services/api'
 
 export default function BiometricOverlay() {
   const { currentBpm, currentHrv, currentConfidence, isScanning } = useBiometrics()
+  const [vitalsSource, setVitalsSource] = useState<'Presage' | 'Simulated' | null>(null)
+
+  useEffect(() => {
+    biometricsApi.getMode().then(({ realPresage }) => {
+      setVitalsSource(realPresage ? 'Presage' : 'Simulated')
+    }).catch(() => setVitalsSource(null))
+  }, [])
 
   if (!isScanning) return null
 
   return (
     <div className="absolute top-20 left-6 space-y-3">
+      {vitalsSource && (
+        <div className="text-xs text-neutral-500 uppercase tracking-wide">
+          Vitals: {vitalsSource}
+        </div>
+      )}
       {/* BPM Card */}
       <div className="bg-black/60 backdrop-blur-sm rounded-lg px-4 py-3 min-w-[140px]">
         <div className="flex items-center gap-2">

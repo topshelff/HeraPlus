@@ -9,8 +9,11 @@ import VoicePlayer from '../components/diagnostic/VoicePlayer'
 import ScanProgress from '../components/diagnostic/ScanProgress'
 import Button from '../components/common/Button'
 import LoadingSpinner from '../components/common/LoadingSpinner'
+import { biometricsApi } from '../services/api'
+import type { BiometricSummary } from '../types'
 
-const SCAN_DURATION_SECONDS = 30 // Shorter for demo
+const SCAN_DURATION_SECONDS = 30
+const FRAME_CAPTURE_INTERVAL_MS = 200 // ~5 FPS for Presage-style processing
 
 export default function DiagnosticSessionPage() {
   const navigate = useNavigate()
@@ -23,11 +26,15 @@ export default function DiagnosticSessionPage() {
     processingDiagnosis,
     setProcessingDiagnosis,
     error,
+    cameraStream,
   } = useSession()
   const { startScan, stopScan, addReading, getSummary, scanDuration, isScanning } = useBiometrics()
   const [isInitializing, setIsInitializing] = useState(true)
-  const simulationIntervalRef = useRef<number | null>(null)
-  const baselineRef = useRef({ bpm: 72 + Math.random() * 10, hrv: 45 + Math.random() * 15 })
+  const [lastServerSummary, setLastServerSummary] = useState<BiometricSummary | null>(null)
+  const sessionIdRef = useRef<string | null>(null)
+  const captureVideoRef = useRef<HTMLVideoElement | null>(null)
+  const captureCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const frameIntervalRef = useRef<number | null>(null)
 
   // Initialize camera on mount
   useEffect(() => {
@@ -45,54 +52,88 @@ export default function DiagnosticSessionPage() {
     return () => {
       stopCamera()
       stopScan()
-      if (simulationIntervalRef.current) {
-        clearInterval(simulationIntervalRef.current)
+      if (frameIntervalRef.current) {
+        clearInterval(frameIntervalRef.current)
+      }
+      const sid = sessionIdRef.current
+      if (sid) {
+        biometricsApi.stop(sid).catch(() => {})
+        sessionIdRef.current = null
       }
     }
   }, [initializeCamera, stopCamera, stopScan, setScanPhase])
 
-  // Simulate biometric readings during scan (DEMO MODE)
+  // Presage-style vitals: capture camera frames and send to server for BPM/HRV
   useEffect(() => {
-    if (isScanning) {
-      const startTime = Date.now()
+    if (!isScanning || !cameraStream || !sessionIdRef.current) return
 
-      simulationIntervalRef.current = window.setInterval(() => {
-        const elapsed = (Date.now() - startTime) / 1000
-        const baseline = baselineRef.current
+    const video = captureVideoRef.current
+    const canvas = captureCanvasRef.current
+    if (!video || !canvas) return
 
-        // Generate realistic-looking biometric data
-        const breathingCycle = Math.sin(elapsed * 0.3) * 3
-        const naturalVariation = Math.sin(elapsed * 0.1) * 2
-        const noise = (Math.random() - 0.5) * 4
+    video.srcObject = cameraStream
+    video.play().catch(() => {})
 
-        const bpm = Math.round(baseline.bpm + breathingCycle + naturalVariation + noise)
-        const hrv = Math.round(baseline.hrv + Math.sin(elapsed * 0.2) * 8 + (Math.random() - 0.5) * 6)
-        const confidence = Math.min(0.6 + (elapsed / 30) * 0.3 + (Math.random() - 0.5) * 0.1, 0.98)
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
 
-        addReading({
-          bpm: Math.max(55, Math.min(110, bpm)),
-          hrv: Math.max(15, Math.min(70, hrv)),
-          confidence,
-          timestamp: Date.now(),
-        })
-      }, 1000) // Update every second
+    const sessionId = sessionIdRef.current
 
-      return () => {
-        if (simulationIntervalRef.current) {
-          clearInterval(simulationIntervalRef.current)
-        }
+    const captureAndSendFrame = async () => {
+      if (video.readyState < 2 || video.videoWidth === 0) return
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      ctx.drawImage(video, 0, 0)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+      const base64 = dataUrl.split(',')[1]
+      if (!base64) return
+      try {
+        const reading = await biometricsApi.processFrame(sessionId, base64, Date.now())
+        addReading(reading)
+      } catch (e) {
+        console.warn('Frame processing error:', e)
       }
     }
-  }, [isScanning, addReading])
+
+    const onCanPlay = () => {
+      frameIntervalRef.current = window.setInterval(
+        captureAndSendFrame,
+        FRAME_CAPTURE_INTERVAL_MS
+      )
+    }
+
+    if (video.readyState >= 2) {
+      onCanPlay()
+    } else {
+      video.addEventListener('canplay', onCanPlay, { once: true })
+    }
+
+    return () => {
+      if (frameIntervalRef.current) {
+        clearInterval(frameIntervalRef.current)
+        frameIntervalRef.current = null
+      }
+      video.removeEventListener('canplay', onCanPlay)
+    }
+  }, [isScanning, cameraStream, addReading])
 
   // Handle scan phases and completion
   useEffect(() => {
     if (isScanning) {
       if (scanDuration >= SCAN_DURATION_SECONDS) {
-        stopScan()
-        if (simulationIntervalRef.current) {
-          clearInterval(simulationIntervalRef.current)
+        const sid = sessionIdRef.current
+        if (sid && frameIntervalRef.current) {
+          clearInterval(frameIntervalRef.current)
+          frameIntervalRef.current = null
+          biometricsApi
+            .stop(sid)
+            .then((summary) => {
+              setLastServerSummary(summary)
+              sessionIdRef.current = null
+            })
+            .catch((e) => console.warn('Biometrics stop error:', e))
         }
+        stopScan()
         setScanPhase('complete')
       } else if (scanDuration >= SCAN_DURATION_SECONDS * 0.75) {
         setScanPhase('completing')
@@ -104,9 +145,19 @@ export default function DiagnosticSessionPage() {
     }
   }, [isScanning, scanDuration, stopScan, setScanPhase])
 
-  const handleStartScanning = useCallback(() => {
-    startScan()
-    setScanPhase('scanning')
+  const handleStartScanning = useCallback(async () => {
+    const sessionId = crypto.randomUUID()
+    sessionIdRef.current = sessionId
+    setLastServerSummary(null)
+    try {
+      await biometricsApi.start(sessionId)
+      startScan()
+      setScanPhase('scanning')
+    } catch (e) {
+      console.error('Failed to start biometric session:', e)
+      sessionIdRef.current = null
+      alert('Could not start vitals scan. Please try again.')
+    }
   }, [startScan, setScanPhase])
 
   // Quick test bypass - skip scanning and use sample data
@@ -155,9 +206,9 @@ export default function DiagnosticSessionPage() {
     setProcessingDiagnosis(true)
     setScanPhase('analyzing')
 
-    try {
-      const biometricSummary = getSummary()
+    const biometricSummary = lastServerSummary ?? getSummary()
 
+    try {
       console.log('Sending to Gemini:', {
         intake: { lifeStage, selectedBodyParts, symptoms },
         biometrics: biometricSummary,
@@ -196,6 +247,7 @@ export default function DiagnosticSessionPage() {
       setProcessingDiagnosis(false)
     }
   }, [
+    lastServerSummary,
     getSummary,
     lifeStage,
     selectedBodyParts,
@@ -233,6 +285,20 @@ export default function DiagnosticSessionPage() {
 
   return (
     <div className="min-h-screen bg-neutral-900 relative">
+      {/* Hidden video/canvas for Presage-style frame capture (BPM/HRV via server) */}
+      {isScanning && (
+        <>
+          <video
+            ref={captureVideoRef}
+            autoPlay
+            playsInline
+            muted
+            className="absolute w-0 h-0 opacity-0 pointer-events-none overflow-hidden"
+          />
+          <canvas ref={captureCanvasRef} className="absolute w-0 h-0 opacity-0 pointer-events-none" />
+        </>
+      )}
+
       {/* Camera View */}
       <CameraView />
 

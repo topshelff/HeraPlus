@@ -125,3 +125,72 @@ VITE_API_BASE_URL=http://localhost:3001
 ```
 
 **Note**: OpenStreetMap/Leaflet.js require NO API keys - completely free to use.
+
+---
+
+## Presage Vitals Integration
+
+The website sends camera frames to the server; the server uses either **simulated** vitals or **real Presage** via an external bridge.
+
+### Client → Server flow
+- On "Begin Scan": `POST /api/biometrics/start` (session ID).
+- For each frame (~5 FPS): `POST /api/biometrics/frame` with base64 JPEG; server returns `{ bpm, hrv, confidence }`.
+- After 30s: `POST /api/biometrics/stop`; server returns biometric summary for diagnosis.
+
+### Server modes
+
+| Mode | When | Behaviour |
+|------|------|------------|
+| **Simulated** | `PRESAGE_API_KEY` or `PRESAGE_BRIDGE_PATH` not set | In-process fake BPM/HRV (no bridge). |
+| **Real (bridge)** | Both `PRESAGE_API_KEY` and `PRESAGE_BRIDGE_PATH` set | Spawns bridge process; sends frames on stdin, reads BPM/HRV from stdout. |
+
+### Bridge contract (stdin/stdout)
+
+The server spawns one bridge process per scan session.
+
+- **Stdin** (JSON lines, one per frame):  
+  `{"frame":"<base64 JPEG>","timestamp":<ms>}`  
+  Session end: `{"end":true}` then stdin is closed.
+
+- **Stdout** (JSON lines, one per frame):  
+  `{"bpm":<number>,"hrv":<number>,"confidence":<0-1>}`  
+  One line per frame sent; server blocks until it gets a line.
+
+- **Environment**: Bridge receives `PRESAGE_API_KEY` and `SMARTSPECTRA_API_KEY` (same value).
+
+### 1. Test with mock bridge (no C++ SDK)
+
+To test the pipeline without the Presage C++ SDK:
+
+```bash
+# From repo root (HeraDX)
+export PRESAGE_API_KEY=your_key_from_physiology.presagetech.com
+export PRESAGE_BRIDGE_PATH="server/scripts/presage-mock-bridge.js"
+npm run dev
+```
+
+The mock bridge (`server/scripts/presage-mock-bridge.js`) reads frames from stdin and outputs simulated BPM/HRV so you can verify start → frame → stop flow.
+
+### 2. Real Presage (C++ SDK bridge)
+
+Presage does not expose a public REST API for “upload image, get BPM” from a server. Vitals are computed by the **SmartSpectra C++ SDK** (or Android/iOS SDKs), which talks to Presage’s Physiology API internally.
+
+To use **real** Presage vitals:
+
+1. **Get an API key** at [physiology.presagetech.com](https://physiology.presagetech.com).
+2. **Install the C++ SDK** (e.g. Ubuntu 22.04): see [Presage C++ docs](https://docs.physiology.presagetech.com/cpp/index.html).
+3. **Build a small bridge binary** that:
+   - Reads JSON lines from stdin: `{"frame":"<base64>","timestamp":<ms>}`.
+   - Decodes base64 to image, feeds frames into the SmartSpectra SDK (e.g. spot or continuous mode).
+   - For each frame (or when SDK returns metrics), writes one JSON line to stdout: `{"bpm":<n>,"hrv":<n>,"confidence":<0-1>}`.
+   - On `{"end":true}` exits.
+4. **Point the server at the bridge**:
+   ```bash
+   export PRESAGE_API_KEY=your_key
+   export PRESAGE_BRIDGE_PATH=/path/to/your/presage-bridge
+   ```
+
+The server will spawn this binary per session, pass `PRESAGE_API_KEY`/`SMARTSPECTRA_API_KEY` in the environment, and use its stdout as the source of BPM/HRV. No changes are needed on the website or REST API.
+
+- Presage C++ SDK: [docs.physiology.presagetech.com/cpp](https://docs.physiology.presagetech.com/cpp/index.html)  
+- Samples: [SmartSpectra cpp/samples](https://github.com/Presage-Security/SmartSpectra/tree/main/cpp/samples) (e.g. `minimal_rest_spot_example`).
