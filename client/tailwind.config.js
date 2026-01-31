@@ -7,31 +7,46 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Clinical color palette
-        clinical: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          300: '#7dd3fc',
-          400: '#38bdf8',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c4a6e',
+        // Brand colors
+        brand: {
+          light: '#74AC82',
+          dark: '#164A31',
+          50: '#f0f7f2',
+          100: '#dceee1',
+          200: '#b9dcc3',
+          300: '#8fc49e',
+          400: '#74AC82',
+          500: '#4a9362',
+          600: '#357549',
+          700: '#2a5d3b',
+          800: '#164A31',
+          900: '#0f3422',
         },
-        // Soft healing tones
+        // Clinical color palette (keeping for compatibility)
+        clinical: {
+          50: '#f0f7f2',
+          100: '#dceee1',
+          200: '#b9dcc3',
+          300: '#8fc49e',
+          400: '#74AC82',
+          500: '#4a9362',
+          600: '#357549',
+          700: '#2a5d3b',
+          800: '#164A31',
+          900: '#0f3422',
+        },
+        // Soft healing tones (mapped to brand)
         healing: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          200: '#bbf7d0',
-          300: '#86efac',
-          400: '#4ade80',
-          500: '#22c55e',
-          600: '#16a34a',
-          700: '#15803d',
-          800: '#166534',
-          900: '#14532d',
+          50: '#f0f7f2',
+          100: '#dceee1',
+          200: '#b9dcc3',
+          300: '#8fc49e',
+          400: '#74AC82',
+          500: '#4a9362',
+          600: '#357549',
+          700: '#2a5d3b',
+          800: '#164A31',
+          900: '#0f3422',
         },
         // Warm accent for urgency
         warmth: {
@@ -64,8 +79,15 @@ export default {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
+        'card': '0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 24px rgba(0, 0, 0, 0.06)',
+        'card-hover': '0 4px 12px rgba(0, 0, 0, 0.08), 0 8px 32px rgba(0, 0, 0, 0.1)',
         'clinical': '0 4px 20px rgba(0, 0, 0, 0.08)',
         'clinical-lg': '0 8px 40px rgba(0, 0, 0, 0.12)',
+      },
+      borderRadius: {
+        '2xl': '1rem',
+        '3xl': '1.5rem',
+        '4xl': '2rem',
       },
     },
   },
