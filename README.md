@@ -15,18 +15,18 @@ Run `npm run dev` to start the development server.
 * [Node.js](https://nodejs.org/en) - Backend to run libraries and allow app to function properly
 * [Presage](https://presagetechnologies.com/for-developers) - Software to get biometrics via video
 * [Gemini API](https://aistudio.google.com/) - API used for analyzing video from Presage and connecting vitals to recorded symptoms
-* [ElevenLabs](https://elevenlabs.io/) - Adds a speech to text feature for users to audibly say their symptoms and adds a translation feature so users can speak in a native language for symptoms
 * [Supabase](https://supabase.com/) - User authentication and database
 * [Figma](https://www.figma.com/) - Used to create mockups and UI for LockIn
 * [Claude Code](https://github.com/features/copilot) - AI assistance for fasttracking development process in the limited timeframe
 * [Cursor](https://cursor.com/dashboard) Used to assist in debugging and implementing Docker containerization for Presage web integration, improving development efficiency
+* [Tailwind CSS](https://tailwindcss.com) - CSS framework
 
 ## Authors
 
 * **Emma Humphreys** - *Frontend development + Pitching* - [emqings](https://github.com/emqings)
 * **Saldon Topjor** - *Full-stack development* - [topshelff](https://github.com/topshelff)
 * **Sophie Atkinson** - *Backend development* - [shatkinson22](https://github.com/shatkinson22)
-* **Sherry Sun** - *Backend development* - [Chxrry4132](https://github.com/Chxrry4132)
+* **Sherry Sun** - *Backend development & Pitch slides* - [shersxn](https://github.com/shersxn)
 
 ## Acknowledgments & Credits
 
