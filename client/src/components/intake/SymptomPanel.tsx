@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useApp } from '../../context/AppContext'
 import type { BodyPart } from '../../types'
 import Button from '../common/Button'
+import { voiceApi } from '../../services/api'
 
 const bodyPartLabels: Record<BodyPart, string> = {
   head: 'Head',
@@ -19,6 +20,13 @@ export default function SymptomPanel() {
   const [currentPart, setCurrentPart] = useState<BodyPart | null>(null)
   const [description, setDescription] = useState('')
   const [severity, setSeverity] = useState(5)
+  const [isRecording, setIsRecording] = useState(false)
+  const [isRecordingNotes, setIsRecordingNotes] = useState(false)
+  const [isTranscribing, setIsTranscribing] = useState(false)
+  const [recordError, setRecordError] = useState<string | null>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
+  const recordingTargetRef = useRef<'symptom' | 'notes'>('symptom')
 
   const handleAddSymptom = () => {
     if (currentPart && description.trim()) {
@@ -32,6 +40,72 @@ export default function SymptomPanel() {
       setCurrentPart(null)
     }
   }
+
+  const handleMicClick = useCallback(
+    async (target: 'symptom' | 'notes') => {
+      if (isTranscribing) return
+
+      if (isRecording || isRecordingNotes) {
+        const mr = mediaRecorderRef.current
+        if (mr && mr.state !== 'inactive') {
+          mr.stop()
+          setIsRecording(false)
+          setIsRecordingNotes(false)
+          setIsTranscribing(true)
+        }
+        return
+      }
+
+      setRecordError(null)
+      recordingTargetRef.current = target
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+          ? 'audio/webm;codecs=opus'
+          : 'audio/webm'
+        const recorder = new MediaRecorder(stream)
+        chunksRef.current = []
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunksRef.current.push(e.data)
+        }
+        recorder.onstop = async () => {
+          stream.getTracks().forEach((t) => t.stop())
+          const blob = new Blob(chunksRef.current, { type: mimeType })
+          const targetField = recordingTargetRef.current
+          if (blob.size === 0) {
+            setRecordError('No audio recorded')
+            setIsRecording(false)
+            setIsRecordingNotes(false)
+            return
+          }
+          setIsTranscribing(true)
+          try {
+            const text = await voiceApi.transcribe(blob)
+            if (targetField === 'symptom') {
+              setDescription((prev) => (prev ? `${prev} ${text}` : text))
+            } else {
+              setAdditionalNotes((prev) => (prev ? `${prev} ${text}` : text))
+            }
+          } catch (err) {
+            setRecordError(err instanceof Error ? err.message : 'Transcription failed')
+          } finally {
+            setIsTranscribing(false)
+            setIsRecording(false)
+            setIsRecordingNotes(false)
+          }
+        }
+        recorder.start(200)
+        mediaRecorderRef.current = recorder
+        if (target === 'symptom') setIsRecording(true)
+        else setIsRecordingNotes(true)
+      } catch (err) {
+        setRecordError(
+          err instanceof Error ? err.message : 'Microphone access denied or not supported'
+        )
+      }
+    },
+    [isRecording, isRecordingNotes, isTranscribing, setAdditionalNotes]
+  )
 
   if (selectedBodyParts.length === 0) {
     return (
@@ -67,12 +141,57 @@ export default function SymptomPanel() {
           <label className="block text-sm font-medium text-neutral-700 mb-1">
             Describe your symptom
           </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="e.g., Sharp pain when breathing, dull ache..."
-            className="input min-h-[80px]"
-          />
+          <div className="flex gap-2">
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g., Sharp pain when breathing, dull ache..."
+              className="input min-h-[80px] flex-1"
+            />
+            <button
+              type="button"
+              onClick={() => handleMicClick('symptom')}
+              disabled={isTranscribing}
+              title={isRecording ? 'Stop recording' : 'Record with microphone'}
+              className={`flex-shrink-0 self-start p-3 rounded-lg border transition-colors ${
+                isRecording
+                  ? 'bg-red-100 border-red-300 text-red-700 hover:bg-red-200'
+                  : isTranscribing
+                    ? 'bg-neutral-100 border-neutral-300 text-neutral-500 cursor-wait'
+                    : 'bg-white border-neutral-300 text-clinical-600 hover:bg-clinical-50'
+              }`}
+            >
+              {isRecording ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
+                  </span>
+                  <span className="text-xs font-medium">Stop</span>
+                </span>
+              ) : isTranscribing && recordingTargetRef.current === 'symptom' ? (
+                <span className="text-xs font-medium">...</span>
+              ) : (
+                <svg
+                  className="w-6 h-6"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden
+                >
+                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                  <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                </svg>
+              )}
+            </button>
+          </div>
+          {recordError && (
+            <p className="mt-1 text-sm text-red-600">{recordError}</p>
+          )}
+          {(isRecording || (isTranscribing && recordingTargetRef.current === 'symptom')) && (
+            <p className="mt-1 text-xs text-neutral-500">
+              {isRecording ? 'Recording... Click the mic again to stop and transcribe.' : 'Transcribing...'}
+            </p>
+          )}
         </div>
 
         <div>
@@ -143,12 +262,44 @@ export default function SymptomPanel() {
         <label className="block text-sm font-medium text-neutral-700 mb-1">
           Additional Notes (optional)
         </label>
-        <textarea
-          value={additionalNotes}
-          onChange={(e) => setAdditionalNotes(e.target.value)}
-          placeholder="Any other information you'd like to share..."
-          className="input min-h-[60px]"
-        />
+        <div className="flex gap-2">
+          <textarea
+            value={additionalNotes}
+            onChange={(e) => setAdditionalNotes(e.target.value)}
+            placeholder="Any other information you'd like to share..."
+            className="input min-h-[60px] flex-1"
+          />
+          <button
+            type="button"
+            onClick={() => handleMicClick('notes')}
+            disabled={isTranscribing}
+            title={isRecordingNotes ? 'Stop recording' : 'Record with microphone'}
+            className={`flex-shrink-0 self-start p-3 rounded-lg border transition-colors ${
+              isRecordingNotes
+                ? 'bg-red-100 border-red-300 text-red-700 hover:bg-red-200'
+                : isTranscribing && recordingTargetRef.current === 'notes'
+                  ? 'bg-neutral-100 border-neutral-300 text-neutral-500 cursor-wait'
+                  : 'bg-white border-neutral-300 text-clinical-600 hover:bg-clinical-50'
+            }`}
+          >
+            {isRecordingNotes ? (
+              <span className="flex items-center gap-1.5">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
+                </span>
+                <span className="text-xs font-medium">Stop</span>
+              </span>
+            ) : isTranscribing && recordingTargetRef.current === 'notes' ? (
+              <span className="text-xs font-medium">...</span>
+            ) : (
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   )

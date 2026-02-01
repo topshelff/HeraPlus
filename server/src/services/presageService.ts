@@ -153,7 +153,7 @@ async function buildMp4FromFrames(frames: string[], framerate = 5): Promise<stri
   }
 }
 
-/** POST video to Presage Engine (deltahacks-12 style); return BiometricSummary. */
+/** POST video to Presage Engine (deltahacks-12 style); return BiometricSummary. Throws if API fails or returns no vitals (caller should use fallback). */
 async function callPresageVideoApi(
   videoPath: string,
   sessionStartTime: number
@@ -165,8 +165,11 @@ async function callPresageVideoApi(
   if (PRESAGE_API_KEY) headers['Authorization'] = `Bearer ${PRESAGE_API_KEY}`
 
   const res = await fetch(url, { method: 'POST', headers, body: videoBuf })
-  if (!res.ok) throw new Error(`Presage Video API ${res.status}: ${await res.text()}`)
-  const data = (await res.json()) as {
+  const text = await res.text()
+  if (!res.ok) {
+    throw new Error(`Presage Video API ${res.status}: ${text}`)
+  }
+  let data: {
     success?: boolean
     vitals?: {
       heart_rate?: { avg?: number; min?: number; max?: number; count?: number }
@@ -174,10 +177,22 @@ async function callPresageVideoApi(
       readings_count?: number
     }
   }
+  try {
+    data = JSON.parse(text) as typeof data
+  } catch {
+    throw new Error('Presage Video API returned invalid JSON')
+  }
+  // Treat 200 with success: false or no vitals as "use fallback" so caller gets session-based summary
+  if (data.success === false || !data.vitals) {
+    throw new Error('No vitals data extracted from video')
+  }
   const vitals = data.vitals
-  const hr = vitals?.heart_rate
-  const br = vitals?.breathing_rate
-  const count = vitals?.readings_count ?? hr?.count ?? 0
+  const hr = vitals.heart_rate
+  const br = vitals.breathing_rate
+  const count = vitals.readings_count ?? hr?.count ?? 0
+  if (count === 0 && (hr?.avg == null || hr.avg === 0)) {
+    throw new Error('No vitals data extracted from video')
+  }
   const scanDuration = Math.round((Date.now() - sessionStartTime) / 1000)
   return {
     avgBpm: Math.round(hr?.avg ?? 0),
@@ -187,6 +202,7 @@ async function callPresageVideoApi(
     scanDuration,
     totalReadings: count,
     validReadings: count,
+    source: 'presage',
   }
 }
 
@@ -321,10 +337,35 @@ export class PresageService {
     }
 
     if (usePresageVideoApi && session.storedFrames && session.storedFrames.length > 0) {
-      const videoPath = await buildMp4FromFrames(session.storedFrames, 5)
-      const summary = await callPresageVideoApi(videoPath, session.startTime)
-      activeSessions.delete(sessionId)
-      return summary
+      try {
+        const videoPath = await buildMp4FromFrames(session.storedFrames, 5)
+        const summary = await callPresageVideoApi(videoPath, session.startTime)
+        activeSessions.delete(sessionId)
+        return summary
+      } catch (e) {
+        console.warn(
+          'Presage Video API failed (no vitals or error), using fallback from session readings:',
+          e instanceof Error ? e.message : e
+        )
+        try {
+          const summary = this.calculateSummary(session)
+          activeSessions.delete(sessionId)
+          return { ...summary, source: 'fallback' as const }
+        } catch (fallbackErr) {
+          console.warn('Fallback summary failed, returning minimal summary:', fallbackErr)
+          activeSessions.delete(sessionId)
+          return {
+            avgBpm: 0,
+            avgHrv: 0,
+            minBpm: 0,
+            maxBpm: 0,
+            scanDuration: Math.round((Date.now() - session.startTime) / 1000),
+            totalReadings: session.readings.length,
+            validReadings: 0,
+            source: 'fallback',
+          }
+        }
+      }
     }
 
     if (session.bridgeProcess?.stdin) {

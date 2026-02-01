@@ -62,6 +62,7 @@ export const biometricsApi = {
       scanDuration: number
       totalReadings: number
       validReadings: number
+      source?: 'presage' | 'fallback'
     }>('/api/biometrics/stop', {
       method: 'POST',
       body: { sessionId },
@@ -105,6 +106,23 @@ export const voiceApi = {
 
   getScripts: () =>
     apiRequest<{ phases: string[]; scripts: Record<string, string> }>('/api/voice/scripts'),
+
+  /** Speech-to-text: transcribe audio blob (ElevenLabs Scribe). */
+  transcribe: async (audioBlob: Blob): Promise<string> => {
+    const response = await fetch(`${API_BASE}/api/voice/transcribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': audioBlob.type || 'audio/webm' },
+      body: audioBlob,
+    })
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: 'Transcription failed' }))
+      throw new Error(err.error || 'Transcription failed')
+    }
+
+    const data = (await response.json()) as { text: string }
+    return data.text ?? ''
+  },
 }
 
 // Clinics API

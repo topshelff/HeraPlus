@@ -19,7 +19,10 @@ export default function BiometricProof({ summary }: BiometricProofProps) {
 
   const bpmStatus = getBpmStatus(summary.avgBpm)
   const hrvStatus = getHrvStatus(summary.avgHrv)
-  const qualityPercent = Math.round((summary.validReadings / summary.totalReadings) * 100)
+  const qualityPercent =
+    summary.totalReadings > 0
+      ? Math.round((summary.validReadings / summary.totalReadings) * 100)
+      : 0
 
   return (
     <div className="card">

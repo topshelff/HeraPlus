@@ -112,6 +112,62 @@ So Presage runs **inside Docker**; HeraDX only needs Docker, ffmpeg, and the env
 
 ## Troubleshooting
 
+### “Unauthorized access” / 401 / Usage verification failed: UNAUTHENTICATED
+
+The Presage Engine calls Presage’s **Physiology API** (cloud) to verify your API key. A **401** or **“Usage verification failed: UNAUTHENTICATED”** means that call is failing.
+
+**1. Use the correct API key**
+
+- Get the key from **[physiology.presagetech.com](https://physiology.presagetech.com)** (sign in → API keys / developer settings).
+- Use the **Physiology API** key, not a different product key.
+- Ensure the key is active and not revoked; check that your account has credits if required.
+
+**2. Put the key in `.env` in the project root**
+
+From the **HeraDX project root** (where `docker-compose.presage.yml` lives), create or edit `.env`:
+
+```bash
+PRESAGE_API_KEY=your_actual_key_here
+```
+
+- No spaces around `=`.
+- No quotes unless your key contains spaces (usually it doesn’t).
+- No trailing spaces or newlines after the key.
+- **Do not commit real keys to git** (`.env` should be in `.gitignore`).
+
+**3. Confirm the key reaches the container**
+
+Restart the stack so the container gets the latest env:
+
+```bash
+docker-compose -f docker-compose.presage.yml down
+docker-compose -f docker-compose.presage.yml up -d
+```
+
+Then check that the key is set inside the container (value will be visible; do this only on your own machine):
+
+```bash
+docker-compose -f docker-compose.presage.yml exec presage_engine env | grep -E 'SMARTSPECTRA_API_KEY|PRESAGE_API_KEY'
+```
+
+You should see `SMARTSPECTRA_API_KEY` and/or `PRESAGE_API_KEY` with your key. If they are empty, `.env` is not in the right place or not being loaded (run `docker-compose` from the project root).
+
+**4. If you use a separate env file**
+
+If you use another file (e.g. `.env.presage`), pass it explicitly:
+
+```bash
+docker-compose -f docker-compose.presage.yml --env-file .env.presage up -d
+```
+
+**5. Still 401?**
+
+- Regenerate the key in the [Physiology dashboard](https://physiology.presagetech.com) and update `.env`.
+- Confirm account/contract allows API usage (e.g. credits, plan).
+- Contact Presage: **support@presagetech.com**.
+
+---
+
 ### “ffmpeg not found” or build fails
 
 Install ffmpeg where the **HeraDX server** runs:

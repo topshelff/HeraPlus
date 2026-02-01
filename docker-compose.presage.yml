@@ -16,7 +16,7 @@ services:
       - .env
     environment:
       - SMARTSPECTRA_API_KEY=${PRESAGE_API_KEY:-}
-      - PRESAGE_API_KEY=${PRESAGE_API_KEY:-}
+      - PHYSIOLOGY_API_KEY=${PRESAGE_API_KEY:-}
     volumes:
       - presage_uploads:/app/uploads
     restart: unless-stopped

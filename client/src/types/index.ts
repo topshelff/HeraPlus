@@ -42,6 +42,8 @@ export interface BiometricSummary {
   scanDuration: number
   totalReadings: number
   validReadings: number
+  /** Set when using session fallback (e.g. Presage returned no vitals). */
+  source?: 'presage' | 'fallback'
 }
 
 export type UrgencyLevel = 'EMERGENCY' | 'URGENT' | 'MODERATE' | 'LOW'

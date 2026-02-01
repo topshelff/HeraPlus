@@ -47,15 +47,20 @@ export class GeminiService {
 
     try {
       const parsed = JSON.parse(text) as DiagnosisResult
+      const rawLevel = (parsed.urgencyLevel || 'MODERATE').toString().toUpperCase()
+      const urgencyLevel: DiagnosisResult['urgencyLevel'] =
+        rawLevel === 'EMERGENCY' || rawLevel === 'URGENT' || rawLevel === 'MODERATE' || rawLevel === 'LOW'
+          ? rawLevel
+          : 'MODERATE'
 
       // Ensure all required fields are present
       return {
-        urgencyLevel: parsed.urgencyLevel || 'MODERATE',
+        urgencyLevel,
         urgencyReason: parsed.urgencyReason || 'Unable to determine urgency',
         primaryAssessment: parsed.primaryAssessment || 'Assessment pending',
-        differentialConsiderations: parsed.differentialConsiderations || [],
-        redFlags: parsed.redFlags || [],
-        recommendations: parsed.recommendations || ['Consult with a healthcare provider'],
+        differentialConsiderations: Array.isArray(parsed.differentialConsiderations) ? parsed.differentialConsiderations : [],
+        redFlags: Array.isArray(parsed.redFlags) ? parsed.redFlags : [],
+        recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : ['Consult with a healthcare provider'],
         specialtyReferral: parsed.specialtyReferral,
         disclaimer: parsed.disclaimer || 'This is a preliminary triage assessment, not a medical diagnosis. Always consult with a qualified healthcare provider.',
       }

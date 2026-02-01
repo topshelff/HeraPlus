@@ -131,7 +131,12 @@ export default function DiagnosticSessionPage() {
               setLastServerSummary(summary)
               sessionIdRef.current = null
             })
-            .catch((e) => console.warn('Biometrics stop error:', e))
+            .catch((e) => {
+              console.warn('Biometrics stop error:', e)
+              // Keep flow smooth: use client-side summary so user can still analyze
+              setLastServerSummary(getSummary() ?? null)
+              sessionIdRef.current = null
+            })
         }
         stopScan()
         setScanPhase('complete')
@@ -143,7 +148,7 @@ export default function DiagnosticSessionPage() {
         setScanPhase('scanning')
       }
     }
-  }, [isScanning, scanDuration, stopScan, setScanPhase])
+  }, [isScanning, scanDuration, stopScan, setScanPhase, getSummary])
 
   const handleStartScanning = useCallback(async () => {
     const sessionId = crypto.randomUUID()
@@ -337,9 +342,14 @@ export default function DiagnosticSessionPage() {
 
           {scanPhase === 'complete' && !processingDiagnosis && (
             <div className="text-center">
-              <p className="text-healing-400 mb-4">
+              <p className="text-healing-400 mb-2">
                 Scan complete! Ready to analyze your results.
               </p>
+              {lastServerSummary?.source === 'fallback' && (
+                <p className="text-neutral-400 text-sm mb-3">
+                  Vitals were estimated from the session (face not detected in video).
+                </p>
+              )}
               <Button variant="primary" size="lg" onClick={handleAnalyze}>
                 Analyze Results
               </Button>

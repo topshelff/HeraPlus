@@ -119,7 +119,7 @@ export default function ValidationReportPage() {
             <div>
               <span className="text-neutral-500">Areas of Concern:</span>
               <span className="ml-2 font-medium capitalize">
-                {selectedBodyParts.join(', ')}
+                {(selectedBodyParts ?? []).join(', ')}
               </span>
             </div>
             <div>
@@ -130,7 +130,7 @@ export default function ValidationReportPage() {
             </div>
             <div>
               <span className="text-neutral-500">Symptoms Reported:</span>
-              <span className="ml-2 font-medium">{symptoms.length}</span>
+              <span className="ml-2 font-medium">{(symptoms ?? []).length}</span>
             </div>
           </div>
         </div>
@@ -151,7 +151,7 @@ export default function ValidationReportPage() {
 
         {/* Disclaimer */}
         <div className="bg-warmth-50 border border-warmth-200 rounded-lg p-4 text-sm text-warmth-800">
-          <strong>Important:</strong> {diagnosisResult.disclaimer}
+          <strong>Important:</strong> {diagnosisResult?.disclaimer ?? 'This is a preliminary triage assessment. Always consult a qualified healthcare provider.'}
         </div>
       </main>
     </div>
