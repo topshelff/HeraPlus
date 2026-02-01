@@ -219,6 +219,7 @@ CREATE TABLE IF NOT EXISTS public.diagnosis_results (
   red_flags TEXT[],
   differential_considerations TEXT[],
   specialty_referral TEXT,
+  questions_for_doctor TEXT[],
   disclaimer TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

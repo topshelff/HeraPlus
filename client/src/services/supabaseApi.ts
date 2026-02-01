@@ -108,6 +108,11 @@ export const diagnosisApi = {
         urgency_reason: result.urgencyReason,
         primary_assessment: result.primaryAssessment,
         recommendations: result.recommendations,
+        red_flags: result.redFlags || [],
+        differential_considerations: result.differentialConsiderations || [],
+        specialty_referral: result.specialtyReferral || null,
+        disclaimer: result.disclaimer || null,
+        questions_for_doctor: result.questionsForDoctor || [],
       })
 
     if (error) throw error

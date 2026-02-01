@@ -11,26 +11,10 @@ import LoadingSpinner from '../components/common/LoadingSpinner'
 
 const SCAN_DURATION_SECONDS = 30
 
-// Logo component matching the H+ design
+// Logo component
 function Logo() {
   return (
-    <div className="w-12 h-12 bg-healing-800 rounded-xl flex items-center justify-center shadow-md">
-      <svg viewBox="0 0 32 32" className="w-7 h-7" fill="none">
-        <path
-          d="M8 8V24M8 16H16M16 8V24"
-          stroke="#9cb99c"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M24 12V20M20 16H28"
-          stroke="#9cb99c"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-        />
-      </svg>
-    </div>
+    <img src="/logo.png" alt="Hera+" className="w-12 h-12 object-contain" />
   )
 }
 
@@ -572,11 +556,14 @@ export default function IntakePage() {
   }, [startScan, setScanPhase, createSession])
 
   const handleAnalyze = useCallback(async () => {
+    console.log('=== Starting Analysis ===')
     setProcessingDiagnosis(true)
     setScanPhase('analyzing')
 
     try {
       const biometricSummary = getSummary()
+      console.log('Biometric summary:', biometricSummary)
+      console.log('Intake data:', { lifeStage, selectedBodyParts, symptoms, currentMedications })
 
       const response = await fetch('/api/diagnosis/analyze', {
         method: 'POST',
@@ -587,15 +574,20 @@ export default function IntakePage() {
         }),
       })
 
+      console.log('Response status:', response.status)
       const result = await response.json()
+      console.log('API result:', result)
 
       if (result && result.urgencyLevel) {
+        console.log('Valid result, saving and navigating...')
         await saveSessionData(biometricSummary, result)
         setDiagnosisResult(result)
+        console.log('Navigating to /report')
         navigate('/report')
       } else if (!response.ok) {
         throw new Error(`Failed to analyze: ${response.status}`)
       } else {
+        console.log('Result without urgencyLevel, navigating anyway...')
         setDiagnosisResult(result)
         navigate('/report')
       }

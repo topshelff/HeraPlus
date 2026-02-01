@@ -25,28 +25,10 @@ interface SessionData {
   }>
 }
 
-// Logo component matching the H+ design
+// Logo component
 function Logo() {
   return (
-    <div className="w-12 h-12 bg-healing-800 rounded-xl flex items-center justify-center shadow-md">
-      <svg viewBox="0 0 32 32" className="w-7 h-7" fill="none">
-        {/* H shape */}
-        <path
-          d="M8 8V24M8 16H16M16 8V24"
-          stroke="#9cb99c"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        {/* Plus sign */}
-        <path
-          d="M24 12V20M20 16H28"
-          stroke="#9cb99c"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-        />
-      </svg>
-    </div>
+    <img src="/logo.png" alt="Hera+" className="w-12 h-12 object-contain" />
   )
 }
 

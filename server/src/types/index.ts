@@ -48,6 +48,8 @@ export interface BiometricSummary {
   scanDuration: number
   totalReadings: number
   validReadings: number
+  /** Set when using real Presage or fallback mode. */
+  source?: 'presage' | 'fallback'
 }
 
 export type UrgencyLevel = 'EMERGENCY' | 'URGENT' | 'MODERATE' | 'LOW'

@@ -1,7 +1,30 @@
 import { Router, Request, Response } from 'express'
+import express from 'express'
 import { getElevenLabsService, scanScripts, ScanPhase } from '../services/elevenLabsService.js'
 
 export const voiceRouter = Router()
+
+// Speech-to-text: transcribe uploaded audio (ElevenLabs Scribe)
+voiceRouter.post(
+  '/transcribe',
+  express.raw({ type: ['audio/webm', 'audio/mp4', 'audio/ogg', 'audio/wav', 'audio/mpeg'], limit: '25mb' }),
+  async (req: Request, res: Response) => {
+    try {
+      const audioBuffer = req.body as Buffer
+      if (!audioBuffer?.length) {
+        res.status(400).json({ error: 'No audio data' })
+        return
+      }
+      const contentType = (req.headers['content-type'] || 'audio/webm').split(';')[0]!.trim()
+      const service = getElevenLabsService()
+      const text = await service.transcribe(audioBuffer, contentType)
+      res.json({ text })
+    } catch (error) {
+      console.error('Transcribe error:', error)
+      res.status(500).json({ error: 'Transcription failed' })
+    }
+  }
+)
 
 // Stream speech audio for a given text
 voiceRouter.post('/stream', async (req: Request, res: Response) => {

@@ -87,6 +87,29 @@ export class ElevenLabsService {
 
     return response.body as ReadableStream<Uint8Array>
   }
+
+  /** Speech-to-text: transcribe audio buffer using ElevenLabs Scribe. */
+  async transcribe(audioBuffer: Buffer, mimeType = 'audio/webm'): Promise<string> {
+    const form = new FormData()
+    form.append('model_id', 'scribe_v2')
+    form.append('file', new Blob([audioBuffer], { type: mimeType }), 'recording.webm')
+
+    const response = await fetch(`${ELEVENLABS_API_URL}/speech-to-text`, {
+      method: 'POST',
+      headers: {
+        'xi-api-key': this.apiKey,
+      },
+      body: form,
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      throw new Error(`ElevenLabs STT error: ${response.status} - ${error}`)
+    }
+
+    const data = (await response.json()) as { text?: string }
+    return (data.text ?? '').trim()
+  }
 }
 
 let elevenLabsService: ElevenLabsService | null = null

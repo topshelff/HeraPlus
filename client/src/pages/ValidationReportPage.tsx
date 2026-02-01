@@ -1,8 +1,11 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { useApp } from '../context/AppContext'
 import { useBiometrics } from '../context/BiometricContext'
 import { useAuth } from '../context/AuthContext'
+import { sessionsApi } from '../services/supabaseApi'
 import Button from '../components/common/Button'
+import LoadingSpinner from '../components/common/LoadingSpinner'
 
 // Logo component
 function Logo() {
@@ -137,18 +140,102 @@ function UrgencyBadge({ level }: { level: string }) {
 
 export default function ValidationReportPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const sessionId = searchParams.get('session')
+
   const { signOut } = useAuth()
   const {
-    diagnosisResult,
-    lifeStage,
-    selectedBodyParts,
-    symptoms,
+    diagnosisResult: currentDiagnosisResult,
+    lifeStage: currentLifeStage,
+    selectedBodyParts: currentSelectedBodyParts,
+    symptoms: currentSymptoms,
     currentMedications,
     resetSession,
   } = useApp()
   const { getSummary, resetBiometrics } = useBiometrics()
 
-  const biometricSummary = getSummary()
+  // State for historical session data
+  const [historicalSession, setHistoricalSession] = useState<{
+    lifeStage: string | null
+    selectedBodyParts: string[]
+    symptoms: Array<{ bodyPart: string; description: string; severity: number }>
+    diagnosisResult: {
+      urgencyLevel: string
+      urgencyReason: string
+      primaryAssessment: string
+      recommendations: string[]
+      redFlags: string[]
+      differentialConsiderations: string[]
+      specialtyReferral?: string
+      questionsForDoctor?: string[]
+      disclaimer: string
+    } | null
+    biometricSummary: {
+      avgBpm: number
+      avgHrv: number
+      minBpm: number
+      maxBpm: number
+      scanDuration: number
+      totalReadings: number
+      validReadings: number
+    } | null
+  } | null>(null)
+  const [loading, setLoading] = useState(!!sessionId)
+
+  // Load historical session if sessionId is in URL
+  useEffect(() => {
+    if (sessionId) {
+      setLoading(true)
+      sessionsApi.getById(sessionId)
+        .then((data) => {
+          const diagnosis = data.diagnosis_results?.[0]
+          const biometrics = data.biometric_summaries?.[0]
+
+          setHistoricalSession({
+            lifeStage: data.life_stage,
+            selectedBodyParts: data.selected_body_parts || [],
+            symptoms: (data.symptoms || []).map((s: { body_part: string; description: string; severity: number }) => ({
+              bodyPart: s.body_part,
+              description: s.description,
+              severity: s.severity,
+            })),
+            diagnosisResult: diagnosis ? {
+              urgencyLevel: diagnosis.urgency_level,
+              urgencyReason: diagnosis.urgency_reason || '',
+              primaryAssessment: diagnosis.primary_assessment,
+              recommendations: diagnosis.recommendations || [],
+              redFlags: diagnosis.red_flags || [],
+              differentialConsiderations: diagnosis.differential_considerations || [],
+              specialtyReferral: diagnosis.specialty_referral,
+              questionsForDoctor: diagnosis.questions_for_doctor || [],
+              disclaimer: diagnosis.disclaimer || 'This is not medical advice.',
+            } : null,
+            biometricSummary: biometrics ? {
+              avgBpm: biometrics.avg_bpm,
+              avgHrv: biometrics.avg_hrv,
+              minBpm: biometrics.min_bpm,
+              maxBpm: biometrics.max_bpm,
+              scanDuration: biometrics.scan_duration || 0,
+              totalReadings: 0,
+              validReadings: 0,
+            } : null,
+          })
+        })
+        .catch((err) => {
+          console.error('Failed to load session:', err)
+        })
+        .finally(() => {
+          setLoading(false)
+        })
+    }
+  }, [sessionId])
+
+  // Use historical data if available, otherwise use current context
+  const diagnosisResult = historicalSession?.diagnosisResult || currentDiagnosisResult
+  const lifeStage = historicalSession?.lifeStage || currentLifeStage
+  const selectedBodyParts = historicalSession?.selectedBodyParts || currentSelectedBodyParts
+  const symptoms = historicalSession?.symptoms || currentSymptoms
+  const biometricSummary = historicalSession?.biometricSummary || getSummary()
 
   const handleStartNew = () => {
     resetSession()
@@ -171,6 +258,17 @@ export default function ValidationReportPage() {
     } else {
       navigate(path)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner size="lg" />
+          <p className="mt-4 text-neutral-600">Loading report...</p>
+        </div>
+      </div>
+    )
   }
 
   if (!diagnosisResult) {
@@ -210,7 +308,18 @@ export default function ValidationReportPage() {
         <header className="bg-white border-b border-neutral-100 px-8 py-4 print:border-b-2 print:border-black">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-neutral-400">Health Report</p>
+              {sessionId && (
+                <button
+                  onClick={() => navigate('/history')}
+                  className="flex items-center gap-1 text-sm text-brand-dark hover:text-brand-800 mb-1 print:hidden"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Back to History
+                </button>
+              )}
+              <p className="text-sm text-neutral-400">Health Report {sessionId ? '(Historical)' : ''}</p>
               <h1 className="text-2xl font-semibold text-neutral-800">Health Status Overview</h1>
             </div>
             <div className="flex items-center gap-3 print:hidden">
@@ -238,6 +347,19 @@ export default function ValidationReportPage() {
 
         {/* Dashboard Content */}
         <div className="p-8">
+          {/* Disclaimer - At Top */}
+          <div className="bg-warmth-50 border border-warmth-200 rounded-3xl p-6 mb-6">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-warmth-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div>
+                <p className="font-medium text-warmth-800 mb-1">Important Disclaimer</p>
+                <p className="text-sm text-warmth-700">{diagnosisResult.disclaimer}</p>
+              </div>
+            </div>
+          </div>
+
           {/* Top Row - Stats and Assessment */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             {/* Biometric Stats */}
@@ -490,18 +612,6 @@ export default function ValidationReportPage() {
             )}
           </div>
 
-          {/* Disclaimer */}
-          <div className="bg-warmth-50 border border-warmth-200 rounded-3xl p-6">
-            <div className="flex items-start gap-3">
-              <svg className="w-5 h-5 text-warmth-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div>
-                <p className="font-medium text-warmth-800 mb-1">Important Disclaimer</p>
-                <p className="text-sm text-warmth-700">{diagnosisResult.disclaimer}</p>
-              </div>
-            </div>
-          </div>
         </div>
       </main>
     </div>
